@@ -178,21 +178,94 @@ res.cookie('refreshToken',refreshToken),{
 const userDto=new userDTO(user)
 return res.status(200).json({user:userDto,auth:true})  // auth true will be discussed in front end 
 
+},
+async logout(req,res,next){
+//1. delete refresh token from database
+const {refreshToken}=req.cookies;
+try {
+    await RefreshToken.deleteOne({token:refreshToken})
+} catch (error) {
+    return next(error)
+}
+
+//2.delete cookies
+res.clearCookie("accessToken");
+res.clearCookie("refreshToken");
+
+
+
+//3.send response
+res.status(200).json({user:null,auth:false})
+
+},
+
+async refresh(req,res,next){
+//1.get refreshToken from cookies
+
+const originalRefreshToken=req.cookies.refreshToken;
+//2.verify refresh Token
+let id;
+try {
+    id=JWTService.verfiyRefreshToken(originalRefreshToken)._id;  
+} catch (err) {  
+    if (err.name === 'TokenExpiredError') {
+        console.log('Refresh token has expired.'); // This message will be logged.
+
+        const error={
+            status:401,
+            message:"unathorized"
+        }
+        return next(error)
+      } else {
+        console.error('Error verifying refresh token:', err.message);
+        return next(err)
+      }
+
+   
+}
+
+
+try {
+    const match= await RefreshToken.findOne({_id: id , token:originalRefreshToken})
+    if(!match){
+        const error={
+            status:401,
+            message:"unathorized"
+        }
+        return next(error)
+    }
+} catch (error) {
+    return next(error)
+}
+
+//3. generate new token
+
+try {
+    let accessToken=JWTService.signAccessToken({_id:id},'30m');
+    let refreshToken=JWTService.signRefreshToken({_id:id},'60m');
+   // update db
+    await RefreshToken.updateOne({_id:id},{token:refreshToken});
+
+    res.cookie("accessToken",accessToken,{
+        maxAge:1000 * 60 * 60 * 24,
+        httpOnly: true
+    })
+    res.cookie("refreshToken",refreshToken,{
+        maxAge:1000 * 60 * 60 * 24,
+        httpOnly: true
+    })
+}
+
+ catch (error) {
+return next(error)
+    }
+
+//4.  return response
+const user=await User.findOne({_id:id});
+const userDto=new userDTO(user);
+return res.status(200).json({User:userDto,auth: true})
 }
 }
 module.exports=authController;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
