@@ -20,7 +20,7 @@ async create(req,res,next){
         title:Joi.string().required(),
         author:Joi.string().regex(mongodbIdPattern).required(),
         content:Joi.string().required(),
-          // client side -> base64 encoded string -> decode -> store in cloudinary -> save photo's path in db
+          // client side -> base64 encoded string -> decode -> store in locally -> save photo's path in db
         photo:Joi.string().required()
       })
 
@@ -44,7 +44,7 @@ const { title, author, content, photo } = req.body;
   
 
 
-console.log(`${BACKEND_SERVER_PATH}/storage/${imagePath}`)
+// console.log(`${BACKEND_SERVER_PATH}/storage/${imagePath}`)
    //3. store data in database
    let newBlog;
    try {

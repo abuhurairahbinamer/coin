@@ -11,8 +11,10 @@ const cookieParser=require('cookie-parser');
 app.use(cookieParser());
 app.use(express.json({limit:"50mb"}));  // application can send and receive data in jason form -->{limit:"50mb"} is used to increase the limit of the req.body i.e if larger image is passed than it will not thrown the error
 
+app.use('/storage',express.static('storage'));  // for making image accessible on server
 
 app.use(router);
+
 
 dbconnect();
 const PORT1=PORT
