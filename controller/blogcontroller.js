@@ -4,6 +4,7 @@ const fs=require('fs');
 const Blog=require('../models/blog')
 const {BACKEND_SERVER_PATH}=require('../config/index')
 const BlogDTO=require('../dto/blog')
+const BlogsDetailsDTO=require('../dto/blogs-details')
 // const {CLOUD_NAME,CLOUD_KEY,CLOUD_KEY_SECRET}=require('../config/index')
 // cloudinary.config({
   //   cloud_name: CLOUD_NAME,
@@ -12,10 +13,11 @@ const BlogDTO=require('../dto/blog')
 
   //   api_secret: CLOUD_KEY_SECRET,
   // });
+  const mongodbIdPattern = /^[0-9a-fA-F]{24}$/;
 const blogController={
 async create(req,res,next){
    // 1. validate req body
-   const mongodbIdPattern = /^[0-9a-fA-F]{24}$/;
+
       const createBlogSchema=Joi.object({
         title:Joi.string().required(),
         author:Joi.string().regex(mongodbIdPattern).required(),
@@ -76,9 +78,53 @@ const { title, author, content, photo } = req.body;
 
    
 },
-async getall(req,res,next){},
-async getById(req,res,next){},
-async update(req,res,next){},
+async getall(req,res,next){
+  try {
+    const blogs=await Blog.find({});
+
+    let blogDto=[]
+    for(let i=0; i<blogs.length; i++){
+      let p=new BlogDTO(blogs[i]);
+      blogDto.push(p);
+    }
+
+    return res.status(200).json({blogs:blogDto});
+  } catch (error) {
+    return next(error)
+  }
+},
+async getById(req,res,next){
+// validate
+const getByIdSchema=Joi.object({
+  id:Joi.string().regex(mongodbIdPattern).required()
+})
+
+const {error}=getByIdSchema.validate(req.params)
+if (error){
+  return next(error);
+}
+const {id}=req.params;
+let blog
+try {
+   blog= await Blog.findOne({_id:id}).populate('author');
+
+} catch (error) {
+
+  return next (error);
+
+}
+
+const blog_details_Dto=new BlogsDetailsDTO(blog);
+// send response
+return res.status(200).json({blog:blog_details_Dto});
+
+
+
+},
+
+async update(req,res,next){
+
+},
 async delete(req,res,next){}
 }
 
